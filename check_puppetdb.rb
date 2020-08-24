@@ -393,8 +393,10 @@ def catalogDuplicatesMetrics()
   result = {'perfdata' => '', 'returncode' => 0}
   case $api_version
   # api endpoint does somehow not work. parameters like in doku do not succeed
-  # when /^[56]/
+  when /^[56]/
   #   url = "http://#{$host}:#{$port}/metrics/v2/read/puppetlabs.puppetdb.storage:name=duplicate-pct"
+    result['text'] = "Catalog duplication: N/A"
+    return result
   when /^[4]/
     url = "http://#{$host}:#{$port}/metrics/v1/mbeans/puppetlabs.puppetdb.storage:name=duplicate-pct"
   when /^3/
@@ -521,7 +523,7 @@ if ! skip_checks
     threads << Thread.new{ results << JvmMetrics() }
     threads << Thread.new{ results << JvmThreading() }
     threads << Thread.new{ results << queueMetrics($queuewarn, $queuecrit) }
-    # threads << Thread.new{ results << catalogDuplicatesMetrics() }
+    threads << Thread.new{ results << catalogDuplicatesMetrics() }
     threads << Thread.new{ results << populationNodesMetrics() }
     # I only began querying this after updating to PuppetDB 1.6, otherwise it was too slow
     threads << Thread.new{ results << populationResourcesMetrics() }
@@ -547,7 +549,7 @@ if ! skip_checks
       results << JvmMetrics()
       results << JvmThreading()
       results << queueMetrics($queuewarn, $queuecrit)
-      # results << catalogDuplicatesMetrics()
+      results << catalogDuplicatesMetrics()
       results << populationNodesMetrics()
       # I only began querying this after updating to PuppetDB 1.6, otherwise it was too slow
       results << populationResourcesMetrics()
@@ -575,7 +577,7 @@ results.sort_by!{|b|b['perfdata']}.each do |result|
     else
       puppetdb_still_alive = false
     end
-    output['text'] += "#{result['text']} "
+    output['text'] += "#{result['text']}, "
     case result['returncode']
     when 3
       output['returncode'] = 3 if result['returncode'] > output['returncode']
@@ -586,7 +588,7 @@ results.sort_by!{|b|b['perfdata']}.each do |result|
     end
   else
     puppetdb_still_alive = true
-    output['text_if_ok'] += "#{result['text']} "
+    output['text_if_ok'] += "#{result['text']}, "
     br = ''
     br = '</br>' if $checkmk
     output['multiline'] += "#{result['text']}#{br}\n"
